@@ -2,6 +2,7 @@
 from hashing_passwords import make_hash
 
 from json import loads
+from pprint import pprint
 from sys import exit
 from typing import Dict
 
@@ -11,21 +12,23 @@ from pendulum import from_timestamp, now
 from redis import StrictRedis
 
 
-def extract_json(bundle) -> Dict:
+VALUE_PER_TEN_SECONDS = 1
+
+
+def extract_json(transaction) -> Dict:
+    print("Extracting payload...")
     extracted_json = {}
-    first_transaction = bundle[0]
     first_tryte_pair = (
-        first_transaction.signature_message_fragment[0]
-        + first_transaction.signature_message_fragment[1]
+        transaction.signature_message_fragment[0]
+        + transaction.signature_message_fragment[1]
     )
     if first_tryte_pair != "OD":
         raise ValueError("No JSON found.")
-    for transaction in bundle:
-        fragment = transaction.signature_message_fragment
-        try:
-            extracted_json.update(loads(fragment.decode()))
-        except ValueError as e:
-            pass
+    fragment = transaction.signature_message_fragment
+    try:
+        extracted_json = loads(fragment.decode())
+    except ValueError as e:
+        pass
     return extracted_json
 
 
@@ -36,29 +39,35 @@ def filter_transactions(iota, deposit_addr):
     return filter(lambda t: transactions["states"][t], transactions["states"])
 
 
+def parse_payload(payload):
+    username = payload.get("username")
+    topic = payload.get("topic")
+    password = make_hash(f"{username}-{topic}")
+    return username, topic, password
+
+
 def check_payments(iota, transactions, addr):
-    payments = {"bundles": []}
+    payments = {}
     bundles = iota.get_bundles(transactions)
     for t in bundles["bundles"][0]:
         trytes_addr = AddressNoChecksum()._apply(TryteString(addr))
         transaction_age = now() - from_timestamp(t.timestamp)
-        if t.address == trytes_addr and transaction_age.in_minutes() < 5:
+        if t.address == trytes_addr and transaction_age.in_minutes() < 5 and t.value > VALUE_PER_TEN_SECONDS:
             print(
                 f"[{from_timestamp(t.timestamp)}] Payment of {t.value}i found on receiving address {trytes_addr[:8]}..."
             )
-            payments.update(iota.get_bundles(t.hash))
-    if not payments.get("bundles"):
+            data = extract_json(t)
+            username, topic, password = parse_payload(data)
+            payments[f"{username}-{topic}"] = {
+                "password": password,
+                "t_hash": t.hash,
+                "t_value": t.value,
+                "expires_in": t.value // VALUE_PER_TEN_SECONDS,
+            }
+    if not payments:
         print("No valid payments found.")
         exit(1)
     return payments
-
-
-def update_auth(payload):
-    username = payload.get("username")
-    topic = payload.get("topic")
-    password = make_hash(f"{username}-{topic}")
-    redis = StrictRedis()
-    redis.set("username")
 
 
 def main():
@@ -69,10 +78,7 @@ def main():
     payments = []
     for t in filter_transactions(iota, receiving_addr):
         payments.append(check_payments(iota, t, receiving_addr))
-    print("Extracting payload...")
-    for p in payments:
-        payload = loads(extract_json(p))
-        update_auth(payload)
+    pprint(payments)
 
 
 if __name__ == "__main__":
