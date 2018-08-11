@@ -1,30 +1,31 @@
 #!/usr/bin/env python
-from json import loads
-from typing import Dict
+from hashing_passwords import make_hash
 
+from json import loads
+from sys import exit
+from typing import Dict
 
 from iota import Iota, TryteString
 from iota.filters import AddressNoChecksum
-from pendulum import from_timestamp
+from pendulum import from_timestamp, now
 from redis import StrictRedis
 
 
 def extract_json(bundle) -> Dict:
     extracted_json = {}
-    first_transaction = bundle["bundles"][0][0]
+    first_transaction = bundle[0]
     first_tryte_pair = (
         first_transaction.signature_message_fragment[0]
         + first_transaction.signature_message_fragment[1]
     )
     if first_tryte_pair != "OD":
         raise ValueError("No JSON found.")
-    for b in bundle["bundles"]:
-        for transaction in b:
-            fragment = transaction.signature_message_fragment
-            try:
-                extracted_json.update(loads(fragment.decode()))
-            except ValueError as e:
-                pass
+    for transaction in bundle:
+        fragment = transaction.signature_message_fragment
+        try:
+            extracted_json.update(loads(fragment.decode()))
+        except ValueError as e:
+            pass
     return extracted_json
 
 
@@ -40,16 +41,24 @@ def check_payments(iota, transactions, addr):
     bundles = iota.get_bundles(transactions)
     for t in bundles["bundles"][0]:
         trytes_addr = AddressNoChecksum()._apply(TryteString(addr))
-        if t.address == trytes_addr:
+        transaction_age = now() - from_timestamp(t.timestamp)
+        if t.address == trytes_addr and transaction_age.in_minutes() < 5:
             print(
                 f"[{from_timestamp(t.timestamp)}] Payment of {t.value}i found on receiving address {trytes_addr[:8]}..."
             )
             payments.update(iota.get_bundles(t.hash))
+    if not payments.get("bundles"):
+        print("No valid payments found.")
+        exit(1)
     return payments
 
 
-def update_auth():
-    pass
+def update_auth(payload):
+    username = payload.get("username")
+    topic = payload.get("topic")
+    password = make_hash(f"{username}-{topic}")
+    redis = StrictRedis()
+    redis.set("username")
 
 
 def main():
@@ -62,7 +71,8 @@ def main():
         payments.append(check_payments(iota, t, receiving_addr))
     print("Extracting payload...")
     for p in payments:
-        print(extract_json(p))
+        payload = loads(extract_json(p))
+        update_auth(payload)
 
 
 if __name__ == "__main__":
