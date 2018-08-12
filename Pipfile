@@ -9,6 +9,7 @@ redis = "*"
 hiredis = "*"
 jupyter = "*"
 pendulum = "*"
+prettytable = "*"
 
 [dev-packages]
 
