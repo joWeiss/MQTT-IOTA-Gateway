@@ -6,6 +6,11 @@ services:
       context: app
     image: iota-demo
     container_name: iota-demo
+    environment:
+      IOTA_NODE: "https://potato.iotasalad.org:14265"
+      REDIS_HOST: redis
+      VALUE_PER_TEN_SECONDS: 1
+    command: ["$ADDRESS"]
   mosquitto:
     build:
       context: mosquitto
@@ -13,6 +18,8 @@ services:
     container_name: mosquitto
     ports:
       - "1883"
+    depends_on:
+      - redis
   redis:
     image: redis:alpine
     container_name: redis

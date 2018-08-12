@@ -2,6 +2,7 @@
 # coding: utf8
 from hashing_passwords import make_hash
 
+import os
 from argparse import ArgumentParser
 from json import loads
 from logging import getLogger, INFO
@@ -13,8 +14,9 @@ from iota.filters import AddressNoChecksum
 from pendulum import from_timestamp, now
 from redis import StrictRedis
 
-
-VALUE_PER_TEN_SECONDS = 1
+IOTA_NODE = os.environ.get("IOTA_NODE", "https://potato.iotasalad.org:14265")
+REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
+VALUE_PER_TEN_SECONDS = os.environ.get("VALUE_PER_TEN_SECONDS", 1)
 logger = getLogger()
 logger.setLevel(INFO)
 
@@ -84,9 +86,10 @@ def check_for_payments(iota, t_hash, addr) -> Dict:
 
 
 def main(receiving_addr):
-    iota = Iota("https://potato.iotasalad.org:14265")
-    redis = StrictRedis()
+    iota = Iota(IOTA_NODE)
+    redis = StrictRedis(REDIS_HOST)
     logger.warning("Successfully connected to remote IOTA node...")
+    logger.warning(f"Receiving address: {receiving_addr}")
     while True:
         logger.warning("Searching for valid and unprocessed transactions...")
         payments = []
