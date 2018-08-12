@@ -16,7 +16,7 @@ from redis import StrictRedis
 
 IOTA_NODE = os.environ.get("IOTA_NODE", "https://potato.iotasalad.org:14265")
 REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
-VALUE_PER_TEN_SECONDS = os.environ.get("VALUE_PER_TEN_SECONDS", 1)
+VALUE_PER_TEN_SECONDS = int(os.environ.get("VALUE_PER_TEN_SECONDS", 1))
 logger = getLogger()
 logger.setLevel(INFO)
 
