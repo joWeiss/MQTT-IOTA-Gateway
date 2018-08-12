@@ -27,4 +27,11 @@ You can configure the following settings:
 - as an environment variable:
     - `ADDRESS`: The receiving IOTA address for payments (Required)
 
+To allow unconfirmed transactions to be processed, add the flag `--allow-unconfirmed` to the `command` field in `docker-compose.yml`:
 
+```yml
+services:
+  iota:
+    ...
+    command: ["--allow-unconfirmed", "$ADDRESS"]
+```
