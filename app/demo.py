@@ -37,14 +37,14 @@ def extract_json(transaction) -> Dict:
     return extracted_json
 
 
-def filter_transactions(iota, deposit_addr, only_confirmed=True):
+def filter_transactions(iota, deposit_addr, allow_unconfirmed):
     transactions = iota.get_latest_inclusion(
         iota.find_transactions(addresses=[deposit_addr])["hashes"]
     )
-    if only_confirmed:
-        return filter(lambda t: transactions["states"][t], transactions["states"])
-    else:
+    if allow_unconfirmed:
         return transactions["states"].keys()
+    else:
+        return filter(lambda t: transactions["states"][t], transactions["states"])
 
 
 def parse_payload(payload) -> Tuple[str, str, str]:
@@ -85,7 +85,7 @@ def check_for_payments(iota, t_hash, addr) -> Dict:
     return payments
 
 
-def main(receiving_addr):
+def main(receiving_addr, allow_unconfirmed):
     iota = Iota(IOTA_NODE)
     redis = StrictRedis(REDIS_HOST)
     logger.warning("Successfully connected to remote IOTA node...")
@@ -93,7 +93,7 @@ def main(receiving_addr):
     while True:
         logger.warning("Searching for valid and unprocessed transactions...")
         payments = []
-        for t in filter_transactions(iota, receiving_addr, only_confirmed=False):
+        for t in filter_transactions(iota, receiving_addr, allow_unconfirmed=allow_unconfirmed):
             skip = redis.get(t)
             if not skip:
                 payments.append(check_for_payments(iota, t, receiving_addr))
@@ -123,5 +123,7 @@ def main(receiving_addr):
 if __name__ == "__main__":
     parser = ArgumentParser(description='Check for payments on address')
     parser.add_argument('address', metavar='address', type=str, help="The wallet address to check for valid payments.")
+    parser.add_argument("--allow-unconfirmed", dest="allow", action='store_true')
     args = parser.parse_args()
-    main(args.address)
+    logger.debug(f"Allow unconfirmed: {args.allow}")
+    main(receiving_addr=args.address, allow_unconfirmed=args.allow)
