@@ -1,9 +1,10 @@
 #!/usr/bin/env python
+# coding: utf8
 from hashing_passwords import make_hash
 
+from argparse import ArgumentParser
 from json import loads
 from logging import getLogger, INFO
-from pprint import pprint
 from time import sleep
 from typing import Dict, Tuple
 
@@ -82,20 +83,19 @@ def check_for_payments(iota, t_hash, addr) -> Dict:
     return payments
 
 
-def main():
+def main(receiving_addr):
     iota = Iota("https://potato.iotasalad.org:14265")
     redis = StrictRedis()
-    receiving_addr = "MPUKMWNFTYFRLJDE9ZWJY9JPKVEIIKDOWANMJIHJJWPOINFRXKVLWOUHFCMCWLO9GAAWDRWGXMTKFCIZDDQTTHNERC"
     logger.warning("Successfully connected to remote IOTA node...")
     while True:
-        logger.warning("Searching for valid transactions...")
+        logger.warning("Searching for valid and unprocessed transactions...")
         payments = []
-        for t in filter_transactions(iota, receiving_addr, only_confirmed=True):
+        for t in filter_transactions(iota, receiving_addr, only_confirmed=False):
             skip = redis.get(t)
             if not skip:
                 payments.append(check_for_payments(iota, t, receiving_addr))
         payments = list(filter(None, payments))
-        if not all(payments):
+        if not (payments and all(payments)):
             logger.warning("No valid payments found.")
         else:
             for payment in payments:
@@ -118,4 +118,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = ArgumentParser(description='Check for payments on address')
+    parser.add_argument('address', metavar='address', type=str, help="The wallet address to check for valid payments.")
+    args = parser.parse_args()
+    main(args.address)
