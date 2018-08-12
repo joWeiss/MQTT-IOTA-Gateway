@@ -35,3 +35,14 @@ services:
     ...
     command: ["--allow-unconfirmed", "$ADDRESS"]
 ```
+
+
+---
+
+If you like the demo and you want to buy me a coffee/beer/drink/whatever, I'm thankful for all donations.
+
+IOTA: QQAVKVQSIBFLQMWDZYMERZIMMT99Y9YSWRWZHLTCDMRWHPEDULQHPMZAMVSPRJJ9POIOJRZIUMVIECXC9AVVDWOWKD
+
+BTC: bc1qsswmasrc3jlhr2z562jlqjyw4cvu8kpu2ju704
+
+BTC (segwit): 393xkxrFuvC4h6o3Y6sPXbwuBdrTqBfxZw
