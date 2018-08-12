@@ -2,8 +2,7 @@
 from hashing_passwords import make_hash
 
 from json import loads
-from pprint import pprint
-from sys import exit
+from logging import getLogger
 from time import sleep
 from typing import Dict, Tuple
 
@@ -14,6 +13,7 @@ from redis import StrictRedis
 
 
 VALUE_PER_TEN_SECONDS = 1
+logger = getLogger()
 
 
 def extract_json(bundle) -> Dict:
@@ -32,7 +32,7 @@ def extract_json(bundle) -> Dict:
                 extracted_json.update(loads(fragment.decode()))
                 break
             except ValueError as e:
-                print(e)
+                logger.exception(e)
         break
     return extracted_json
 
@@ -41,7 +41,7 @@ def filter_transactions(iota, deposit_addr):
     transactions = iota.get_latest_inclusion(
         iota.find_transactions(addresses=[deposit_addr])["hashes"]
     )
-    return list(transactions["states"].keys())
+    return transactions["states"].keys()
     # pprint(transactions)
     # return filter(lambda t: transactions["states"][t], transactions["states"])
 
@@ -59,8 +59,12 @@ def check_for_payments(iota, transactions, addr) -> Dict:
     for t in bundles["bundles"][0]:
         trytes_addr = AddressNoChecksum()._apply(TryteString(addr))
         transaction_age = now() - from_timestamp(t.timestamp)
-        if t.address == trytes_addr and transaction_age.in_minutes() < 60 and t.value > 2 * VALUE_PER_TEN_SECONDS:
-            print(
+        if (
+            t.address == trytes_addr
+            and transaction_age.in_minutes() < 60
+            and t.value >= VALUE_PER_TEN_SECONDS
+        ):
+            logger.info(
                 f"[{from_timestamp(t.timestamp)}] Payment of {t.value}i found on receiving address {trytes_addr[:8]}..."
             )
             try:
@@ -70,39 +74,45 @@ def check_for_payments(iota, transactions, addr) -> Dict:
                 payments["topic"] = topic
                 payments["password"] = password
                 payments["expires_after"] = 10 * (t.value // VALUE_PER_TEN_SECONDS)
-                payments[f"{username}-{topic}"] = {
-                    "password": password,
-                    "t_hash": t.hash,
-                    "t_value": t.value,
-                    "expires_after": 10 * (t.value // VALUE_PER_TEN_SECONDS),
-                }
-                pprint(payments)
+                payments["t_hash"] = t.hash
+                payments["t_value"] = t.value
             except Exception as e:
-                print(e)
+                logger.exception(e)
     return payments
 
 
 def main():
     iota = Iota("https://potato.iotasalad.org:14265")
     receiving_addr = "MPUKMWNFTYFRLJDE9ZWJY9JPKVEIIKDOWANMJIHJJWPOINFRXKVLWOUHFCMCWLO9GAAWDRWGXMTKFCIZDDQTTHNERC"
-    print("Successfully connected to remote IOTA node...")
+    logger.info("Successfully connected to remote IOTA node...")
     while True:
-        print("Searching for valid transactions...")
+        logger.info("Searching for valid transactions...")
         payments = []
         for t in filter_transactions(iota, receiving_addr):
             payments.append(check_for_payments(iota, t, receiving_addr))
         payments = list(filter(None, payments))
-        pprint(payments)
         if not all(payments):
-            print("No valid payments found.")
+            logger.info("No valid payments found.")
         else:
             redis = StrictRedis()
             for payment in payments:
-                pprint(payment)
-                redis.set(payment["username"], payment["password"], ex=payment["expires_after"], nx=True)
-                # that's the only value that works right now...
-                redis.set(f"{payment['username']}-{payment['topic']}", 4, ex=payment["expires_after"], nx=True)
-        print("...")
+                if not redis.get(payment["t_hash"]):
+                    redis.set(
+                        name=payment["username"],
+                        value=payment["password"],
+                        ex=payment["expires_after"],
+                        nx=True,
+                    )
+                    # that's the only value that works right now...
+                    redis.set(
+                        name=f"{payment['username']}-{payment['topic']}",
+                        value=4,
+                        ex=payment["expires_after"],
+                        nx=True,
+                    )
+                    redis.set(name=payment["t_hash"], value=1)
+                else:
+                    continue
         sleep(5)
 
 
