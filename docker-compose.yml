@@ -1,0 +1,18 @@
+version: '2.4'
+
+services:
+  iota:
+    build:
+      context: app
+    image: iota-demo
+    container_name: iota-demo
+  mosquitto:
+    build:
+      context: mosquitto
+    image: mosquitto-auth-plug
+    container_name: mosquitto
+    ports:
+      - "1883"
+  redis:
+    image: redis:alpine
+    container_name: redis
