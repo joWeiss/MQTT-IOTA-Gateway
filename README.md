@@ -2,6 +2,18 @@
 
 This is a small demo application that searches for incoming transactions on a given IOTA address and authorizes a user to receive data on a MQTT broker, depending on the payload of the transaction.
 
+![Demo](./iota-demo.png)
+
+## How to start the demo
+
+#### TL;DR
+
+1. Install `docker` and `docker-compose` for your OS from [here](https://docs.docker.com/compose/install/).
+2. Clone (`git clone https://github.com/joWeiss/iota-demo-python.git`) or
+   [download](https://github.com/joWeiss/iota-demo-python/archive/master.zip) this repo.
+3. Open the folder in a terminal and start the services with `docker-compose up`.
+
+
 ## Usage
 
 The user has to send a transaction to a specified address. The transaction value has to be a multiple of `VALUE_PER_TEN_SECONDS` and has to carry a message in JSON format like this:
