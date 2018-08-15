@@ -20,6 +20,13 @@ services:
       - "1883"
     depends_on:
       - redis
+  redis-bootstrap:
+    image: redis-bootstrap
+    build:
+      context: redis
+    container_name: redis-bootstrap
+    depends_on:
+      - redis
   redis:
     image: redis:alpine
     container_name: redis
