@@ -36,7 +36,16 @@ second.
 
 ### The Subscriber
 
-To connect and subscribe to topics on the broker, the user has to send a valid payment to the provided IOTA wallet
+To enable the connection with a custom username/password combination, the user has to send a 0-value transaction to the provided IOTA wallet with the following message format:
+
+- `"username"`: The username to connect to the broker
+- `"password"`: A PBKDF2 hash of the password the user wants to use to connect. This password can be generated with the file `hashing_passwords.py` (See file for usage).
+
+```json
+{"username": "jonas", "password": "PBKDF2$sha256$901$NWq3cjVMjsrHT+VX$bwGz77L8DoHNAu4rUrAZRYFMGimifkLQ"}
+```
+
+To subscribe to topics on the broker, the user has to send a valid payment to the provided IOTA wallet
 address prior to any connection attempt. The transaction value has to be a multiple of `VALUE_PER_TEN_SECONDS` and has
 to carry a message in JSON format like this:
 
@@ -46,9 +55,22 @@ to carry a message in JSON format like this:
 
 This allows the user to connect to the broker, e.g.:
 
+- with the applications from the `mosquitto-clients` package:
+
 ```bash
 #!/bin/bash
-$ mosquitto_sub --username jonas --password jonas-mytopic --topic mytopic
+$ mosquitto_sub --username jonas --password mysupersecretpassword --topic mytopic --host localhost --port 1883
+```
+- with a python implementation:
+
+```python
+# see official documentation for paho-mqtt on pypi or github
+# for a proper example
+from paho.mqtt.client import Client
+
+mqttclient = Client()
+mqttclient.username_pw_set(username="jonas", password="mysupersecretpassword")
+mqttclient.connect("localhost", port=1883)
 ```
 
 The `clients/subscriber.sh` script is an example for a client that tries to connect to the broker of this demo.
