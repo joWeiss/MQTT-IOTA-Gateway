@@ -1,4 +1,4 @@
-# IOTA-DEMO-PYTHON
+# MQTT-IOTA-GATEWAY
 
 This is a small demo application that searches for incoming transactions on a
 given IOTA address and authorizes a user to receive data on a MQTT broker,
@@ -7,8 +7,8 @@ depending on the payload of the transaction.
 ## TL;DR: How to start the demo
 
 1. Install `docker` and `docker-compose` for your OS from [here](https://docs.docker.com/compose/install/).
-2. Clone (`git clone https://github.com/joWeiss/iota-demo-python.git`) or
-   [download](https://github.com/joWeiss/iota-demo-python/archive/master.zip) this repo.
+2. Clone (`git clone https://github.com/joWeiss/MQTT-IOTA-GATEWAY.git`) or
+   [download](https://github.com/joWeiss/MQTT-IOTA-GATEWAY/archive/master.zip) this repo.
 3. Open the folder in a terminal and start the services with `docker-compose up`.
 
 ## Setup
