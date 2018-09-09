@@ -14,6 +14,14 @@
     Author: Simon Sapin
     License: BSD
 
+    Expansion by Jonas Weissensel:
+    Ability to call it as a script from the command line.
+    Returns a PBKDF2 hash of the input.
+    USAGE:
+
+    python hashing_passwords.py MYPASSWORD
+
+
 """
 
 import hashlib
@@ -28,7 +36,7 @@ from pbkdf2 import pbkdf2_bin
 # Parameters to PBKDF2. Only affect new passwords.
 SALT_LENGTH = 12
 KEY_LENGTH = 24
-HASH_FUNCTION = 'sha256'  # Must be in hashlib.
+HASH_FUNCTION = "sha256"  # Must be in hashlib.
 # Linear to the hashing time. Adjust to be high but take a reasonable
 # amount of time on your server. Measure with:
 # python -m timeit -s 'import passwords as p' 'p.make_hash("something")'
@@ -38,25 +46,37 @@ COST_FACTOR = 10000
 def make_hash(password):
     """Generate a random salt and return a new hash for the password."""
     if isinstance(password, str):
-        password = password.encode('utf-8')
+        password = password.encode("utf-8")
     salt = b64encode(urandom(SALT_LENGTH))
-    return 'PBKDF2${}${}${}${}'.format(
+    return "PBKDF2${}${}${}${}".format(
         HASH_FUNCTION,
         COST_FACTOR,
-        str(salt, 'utf-8'),
-        str(b64encode(pbkdf2_bin(password, salt, COST_FACTOR, KEY_LENGTH,
-                             getattr(hashlib, HASH_FUNCTION))),'utf-8'))
+        str(salt, "utf-8"),
+        str(
+            b64encode(
+                pbkdf2_bin(
+                    password,
+                    salt,
+                    COST_FACTOR,
+                    KEY_LENGTH,
+                    getattr(hashlib, HASH_FUNCTION),
+                )
+            ),
+            "utf-8",
+        ),
+    )
 
 
 def check_hash(password, hash_):
     """Check a password against an existing hash."""
     if isinstance(password, str):
-        password = password.encode('utf-8')
-    algorithm, hash_function, cost_factor, salt, hash_a = hash_.split('$')
-    assert algorithm == 'PBKDF2'
+        password = password.encode("utf-8")
+    algorithm, hash_function, cost_factor, salt, hash_a = hash_.split("$")
+    assert algorithm == "PBKDF2"
     hash_a = b64decode(hash_a)
-    hash_b = pbkdf2_bin(password, salt, int(cost_factor), len(hash_a),
-                        getattr(hashlib, hash_function))
+    hash_b = pbkdf2_bin(
+        password, salt, int(cost_factor), len(hash_a), getattr(hashlib, hash_function)
+    )
     assert len(hash_a) == len(hash_b)  # we requested this from pbkdf2_bin()
     # Same as "return hash_a == hash_b" but takes a constant time.
     # See http://carlos.bueno.org/2011/10/timing.html
@@ -64,3 +84,8 @@ def check_hash(password, hash_):
     for char_a, char_b in zip(hash_a, hash_b):
         diff |= ord(char_a) ^ ord(char_b)
     return diff == 0
+
+
+if __name__ == "__main__":
+    import sys
+    print(make_hash(sys.argv[1]))

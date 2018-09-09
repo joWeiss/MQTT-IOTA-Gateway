@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # coding: utf8
-from hashing_passwords import make_hash
 
 import os
 from argparse import ArgumentParser
@@ -48,9 +47,9 @@ def filter_transactions(iota, deposit_addr, allow_unconfirmed):
 
 
 def parse_payload(payload) -> Tuple[str, str, str]:
-    username = payload.get("username")
-    topic = payload.get("topic")
-    password = make_hash(f"{username}-{topic}")
+    username = payload.get("username", "")
+    topic = payload.get("topic", "")
+    password = payload.get("password", "")
     return username, topic, password
 
 
@@ -61,11 +60,7 @@ def check_for_payments(iota, t_hash, addr) -> Dict:
     t_trytes = str(iota.get_trytes([t_bytes])["trytes"][0])
     transaction = Transaction.from_tryte_string(t_trytes)
     t_age = now() - from_timestamp(transaction.attachment_timestamp / 1000)
-    if (
-        transaction.address == receiver_addr
-        and t_age.in_minutes() < 60
-        and transaction.value >= VALUE_PER_TEN_SECONDS
-    ):
+    if transaction.address == receiver_addr and t_age.in_minutes() < 60:
         logger.warning(
             f"[{from_timestamp(transaction.timestamp)}] Payment of {transaction.value}i found on receiving address {addr[:8]}..."
         )
@@ -93,7 +88,9 @@ def main(receiving_addr, allow_unconfirmed):
     while True:
         logger.warning("Searching for valid and unprocessed transactions...")
         payments = []
-        for t in filter_transactions(iota, receiving_addr, allow_unconfirmed=allow_unconfirmed):
+        for t in filter_transactions(
+            iota, receiving_addr, allow_unconfirmed=allow_unconfirmed
+        ):
             skip = redis.get(t)
             if not skip:
                 payments.append(check_for_payments(iota, t, receiving_addr))
@@ -105,25 +102,31 @@ def main(receiving_addr, allow_unconfirmed):
                 redis.set(
                     name=payment["username"],
                     value=payment["password"],
-                    ex=payment["expires_after"],
+                    ex=(24 * 3600),  # one day connection allowed
                     nx=True,
                 )
-                # that's the only value that works right now...
-                redis.set(
-                    name=f"{payment['username']}-{payment['topic']}",
-                    value=4,
-                    ex=payment["expires_after"],
-                    nx=True,
-                )
+                # 4 is the only value that works right now...
+                if payment.get("topic"):
+                    redis.set(
+                        name=f"{payment['username']}-{payment['topic']}",
+                        value=4,
+                        ex=payment["expires_after"],
+                        nx=True,
+                    )
                 # mark transaction as processed, so that it is skipped the next round
                 redis.set(name=payment["t_hash"], value=str(payment["t_hash"]))
         sleep(5)
 
 
 if __name__ == "__main__":
-    parser = ArgumentParser(description='Check for payments on address')
-    parser.add_argument('address', metavar='address', type=str, help="The wallet address to check for valid payments.")
-    parser.add_argument("--allow-unconfirmed", dest="allow", action='store_true')
+    parser = ArgumentParser(description="Check for payments on address")
+    parser.add_argument(
+        "address",
+        metavar="address",
+        type=str,
+        help="The wallet address to check for valid payments.",
+    )
+    parser.add_argument("--allow-unconfirmed", dest="allow", action="store_true")
     args = parser.parse_args()
     logger.debug(f"Allow unconfirmed: {args.allow}")
     main(receiving_addr=args.address, allow_unconfirmed=args.allow)

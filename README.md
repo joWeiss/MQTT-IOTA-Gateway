@@ -58,11 +58,11 @@ The `clients/subscriber.sh` script is an example for a client that tries to conn
 You can configure the following settings:
 
 - in `docker-compose.yml`:
-    - `IOTA_NODE`: The iota node to connect to (Default: https://potato.iotasalad.org:14265)
-    - `REDIS_HOST`: The redis-backend for the ACL (Default: redis)
-    - `VALUE_PER_TEN_SECONDS`: The amount of IOTA (i) that enables 10 seconds of access (Default: 1)
+  - `IOTA_NODE`: The iota node to connect to (Default: https://potato.iotasalad.org:14265)
+  - `REDIS_HOST`: The redis-backend for the ACL (Default: redis)
+  - `VALUE_PER_TEN_SECONDS`: The amount of IOTA (i) that enables 10 seconds of access (Default: 1)
 - as an environment variable:
-    - `ADDRESS`: The receiving IOTA address for payments (Required)
+  - `ADDRESS`: The receiving IOTA address for payments (Required)
 
 To allow unconfirmed transactions to be processed, add the flag `--allow-unconfirmed` to the `command` field in `docker-compose.yml`:
 
@@ -80,16 +80,16 @@ can be employed with this setup:
 
 [github.com/jpmens/mosquitto-auth-plug]: https://github.com/jpmens/mosquitto-auth-plug#introduction
 
-| Capability                 | mysql | redis | cdb   | sqlite | ldap | psk | postgres | http | jwt | MongoDB | Files |
-| -------------------------- | :---: | :---: | :---: | :---:  | :-:  | :-: | :------: | :--: | :-: | :-----: | :----:
-| authentication             |   Y   |   Y   |   Y   |   Y    |  Y   |  Y  |    Y     |  Y   |  Y  |  Y      | Y
-| superusers                 |   Y   |       |       |        |      |  3  |    Y     |  Y   |  Y  |  Y      | N
-| acl checking               |   Y   |   1   |   2   |   2    |      |  3  |    Y     |  Y   |  Y  |  Y      | Y
-| static superusers          |   Y   |   Y   |   Y   |   Y    |      |  3  |    Y     |  Y   |  Y  |  Y      | Y
+| Capability        | mysql | redis | cdb | sqlite | ldap | psk | postgres | http | jwt | MongoDB | Files |
+| ----------------- |:-----:|:-----:|:---:|:------:|:----:|:---:|:--------:|:----:|:---:|:-------:|:-----:|
+| authentication    | Y     | Y     | Y   | Y      | Y    | Y   | Y        | Y    | Y   | Y       | Y     |
+| superusers        | Y     |       |     |        |      | 3   | Y        | Y    | Y   | Y       | N     |
+| acl checking      | Y     | 1     | 2   | 2      |      | 3   | Y        | Y    | Y   | Y       | Y     |
+| static superusers | Y     | Y     | Y   | Y      |      | 3   | Y        | Y    | Y   | Y       | Y     |
 
- 1. Topic wildcards (+/#) are not supported
- 2. Currently not implemented; back-end returns TRUE
- 3. Dependent on the database used by PSK
+1. Topic wildcards (+/#) are not supported
+2. Currently not implemented; back-end returns TRUE
+3. Dependent on the database used by PSK
 
 ---
 
@@ -100,4 +100,3 @@ IOTA: QQAVKVQSIBFLQMWDZYMERZIMMT99Y9YSWRWZHLTCDMRWHPEDULQHPMZAMVSPRJJ9POIOJRZIUM
 BTC: bc1qsswmasrc3jlhr2z562jlqjyw4cvu8kpu2ju704
 
 BTC (segwit): 393xkxrFuvC4h6o3Y6sPXbwuBdrTqBfxZw
-
